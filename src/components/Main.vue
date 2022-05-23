@@ -10,20 +10,20 @@
           :width=canvasSize.width
           :height=canvasSize.height
           id="drawer"
-          @click="mouseClick"
           @mousemove="mouseMove"
           @mousedown="mouseDown"
           @mouseup="mouseUp"
           @mouseleave="mouseLeave"
+          @contextmenu.prevent="mouseRightButton"
       >Canvas fallback text
       </canvas>
-
     </div>
     <div class="control-panel">
-      <button class="simple-button" @click="clearButtonClick">Очистить область</button>
       <button class="simple-button" @click="constructButtonClick">{{ constructActionName }}</button>
+      <button class="simple-button" @click="clearButtonClick">Очистить область</button>
       <div class="description">
         <p>ЛКМ - добавление точки</p>
+        <p>ПКМ - удаление точки</p>
         <p>Зажатие ЛКМ - перемещение существующей точки</p>
       </div>
       <ul class="pointList">
@@ -31,10 +31,7 @@
       </ul>
     </div>
   </div>
-
-
 </template>
-
 <script>
 export default {
   name: 'MainComponent',
@@ -57,24 +54,11 @@ export default {
     if (!c.getContext) return;
     this.canvasElem = c;
     this.vueCanvas = c.getContext("2d");
-
-
-    // var ctx = document.getElementById('canvas').getContext('2d');
     this.img = new Image();
     this.img.src = 'assets/example.png';
-    // console.log(this.vueCanvas);
-    console.log(this.vueCanvas);
     this.img.onload = () => {
-      console.log(this.vueCanvas);
       this.vueCanvas.drawImage(this.img, 0, 0);
     }
-
-    // img.onload = function () {
-    //
-    // };
-    // this.clearCanvas(this.vueCanvas);
-
-
   },
   methods: {
     innerPathPoint: function (path, x, y) {
@@ -152,8 +136,6 @@ export default {
       ctx.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
       ctx.rect(0, 0, this.canvasSize.width, this.canvasSize.height);
       this.vueCanvas.drawImage(this.img, 0, 0);
-      // ctx.fillStyle = "#DCDCDC";
-      // ctx.fill();
     },
     mouseUp: function (event) {
       console.log(event);
@@ -161,12 +143,10 @@ export default {
         let rect = event.target.getBoundingClientRect();
         let x = event.clientX - rect.left;
         let y = event.clientY - rect.top;
-        // console.log("Coordinate x: " + x, "Coordinate y: " + y);
         let newElem = {x, y};
         this.pointsArray.push(newElem);
         this.canvasElem.style.cursor = "pointer";
         this.drawPointsArray(this.vueCanvas, this.regionMode, this.pointsArray[this.pointsArray.length - 1]);
-        // this.drawPoint(this.vueCanvas, x, y);
       }
       this.dragMode = false;
     },
@@ -200,6 +180,18 @@ export default {
       this.dragMode = false;
       return this.drawPointsArray(this.vueCanvas, this.regionMode);
     },
+    mouseRightButton: function (event) {
+      let rect = event.target.getBoundingClientRect();
+      let x = event.clientX - rect.left;
+      let y = event.clientY - rect.top;
+      let radius = 7;
+      for (let elem of this.pointsArray) {
+        if (x <= elem.x + radius && x >= elem.x - radius && y <= elem.y + radius && y >= elem.y - radius) {
+          this.pointsArray.splice(this.pointsArray.indexOf(elem), 1);
+          return;
+        }
+      }
+    }
   }
 }
 </script>
@@ -208,6 +200,7 @@ export default {
 .background {
   position: relative;
 }
+
 .canvas-header {
   position: absolute;
   width: 100%;
@@ -216,7 +209,7 @@ export default {
 }
 
 .header-text {
-  font-family: 'Segoe UI';
+  font-family: 'Segoe UI', sans-serif;
   font-style: normal;
   font-weight: 600;
   font-size: 22px;
@@ -224,23 +217,16 @@ export default {
   color: #FFFFFF;
   text-shadow: 0px 2px 3px rgba(0, 0, 0, 0.5);
   padding: 5px 0px 5px 25px;
-
 }
 
 .page {
   display: flex;
   flex-flow: row nowrap;
   column-gap: 30px;
-  /*height: 1000px;*/
 }
 
 #drawer {
   border: 1px solid black;
-}
-
-.back-image {
-  max-height: 500px;
-
 }
 
 h3 {
