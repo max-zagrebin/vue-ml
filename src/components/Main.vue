@@ -7,6 +7,8 @@
         id="drawer"
         @click="clickHandler"
         @mousemove="mouseMove"
+        @mousedown="mouseDown"
+        @mouseup="mouseUp"
     >Canvas fallback text
     </canvas>
   </div>
@@ -24,7 +26,7 @@ export default {
       canvasSize: {width: 300, height: 300},
       pointsArray: [],
       regionMode: false,
-
+      dragMode: false,
     };
   },
   mounted() {
@@ -103,7 +105,7 @@ export default {
       ctx.fill(innerPointsPath);
     },
     drawPointsArray: function (ctx, regionMode, selElem) {
-      if(this.pointsArray.length===0) return;
+      if (this.pointsArray.length === 0) return;
       this.clearCanvas(ctx);
       let innerPointsPath = new Path2D();
       let outerPointsPath = new Path2D();
@@ -114,7 +116,7 @@ export default {
       innerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
       outerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
       this.pointsArray.forEach((elem) => {
-        console.log("ITERATE");
+        // console.log("ITERATE");
         regionPath.lineTo(elem.x, elem.y);
         if (elem === selElem) {
           innerPointsSelPath.moveTo(elem.x, elem.y);
@@ -132,7 +134,7 @@ export default {
         outerPointsPath.moveTo(elem.x, elem.y);
         this.outerPathPoint(outerPointsPath, elem.x, elem.y);
       });
-      if(regionMode){
+      if (regionMode) {
         ctx.fillStyle = "rgba(47,128,237,0.22)";
         ctx.fill(regionPath);
       }
@@ -156,11 +158,21 @@ export default {
       this.regionMode = !this.regionMode;
       this.fillRegion(this.vueCanvas);
     },
-    clearCanvas: function(ctx){
+    clearCanvas: function (ctx) {
       ctx.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
-      ctx.rect(0, 0, this.canvasSize.width,this.canvasSize.height);
+      ctx.rect(0, 0, this.canvasSize.width, this.canvasSize.height);
       ctx.fillStyle = "#DCDCDC";
       ctx.fill();
+    },
+    mouseUp: function (event) {
+      console.log(event);
+      console.log("MOUSE UP");
+      this.dragMode = false;
+    },
+    mouseDown: function (event) {
+      console.log(event);
+      console.log("MOUSE DOWN");
+      this.dragMode = true;
     },
     mouseMove: function (event) {
       let rect = event.target.getBoundingClientRect();
@@ -173,14 +185,33 @@ export default {
       //radius - 7
       //this.pointsArray.push({x, y});
       let radius = 7;
-      for (let elem of  this.pointsArray){
+
+      if (this.dragMode) {
+        
+        // console.log("DRAGGING");
+        // ctx.clearRect(0,0,canvasWidth,canvasHeight);
+        // ctx.drawImage(img,canMouseX-128/2,canMouseY-120/2,128,120);
+      }
+
+
+      for (let elem of this.pointsArray) {
         if (x <= elem.x + radius && x >= elem.x - radius && y <= elem.y + radius && y >= elem.y - radius) {
           console.log("POINT REACHED");
           console.log(elem);
-          return this.drawPointsArray(this.vueCanvas, this.regionMode, elem);
+
+          if (this.dragMode) {
+            elem.x = x;
+            elem.y = y;
+          }else{
+            return this.drawPointsArray(this.vueCanvas, this.regionMode, elem);
+          }
         }
       }
       return this.drawPointsArray(this.vueCanvas, this.regionMode);
+    },
+    mouseDrag: function (event) {
+      console.log("DRAG");
+      console.log(event);
     }
   }
 }
