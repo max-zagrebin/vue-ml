@@ -5,7 +5,7 @@
         :width=canvasSize.width
         :height=canvasSize.height
         id="drawer"
-        @click="clickHandler"
+        @click="mouseClick"
         @mousemove="mouseMove"
         @mousedown="mouseDown"
         @mouseup="mouseUp"
@@ -13,7 +13,7 @@
     </canvas>
   </div>
   <button @click="clearButtonClick">Очистить область</button>
-  <button @click="buttonClick">Завершить область</button>
+  <button @click="buttonClick">{{constructActionName}}</button>
 </template>
 
 <script>
@@ -27,39 +27,17 @@ export default {
       pointsArray: [],
       regionMode: false,
       dragMode: false,
+      selectedElem: null,
+      constructActionName: "Построить область"
     };
   },
   mounted() {
     let c = document.getElementById("drawer");
     if (!c.getContext) return;
-    // let ctx = c.getContext("2d");
     this.vueCanvas = c.getContext("2d");
     this.clearCanvas(this.vueCanvas);
-    // this.vueCanvas.rect(20, 20, 100, 100);
-    //
-    //
-    // ctx.fillStyle = "rgba(0, 0, 200, 0.1)";
-    // ctx.fillRect (30, 30, 55, 50);
-    // this.vueCanvas.beginPath();
-    // this.vueCanvas.moveTo(75,25);
-    // var rectangle = new Path2D();
-    // rectangle.rect(10, 10, 50, 50);
-    // ctx.stroke(rectangle);
   },
   methods: {
-    clickHandler: function (event) {
-      // console.log(event);
-      // console.log(event.pageX);
-      // console.log(event.pageY);
-      let rect = event.target.getBoundingClientRect();
-      let x = event.clientX - rect.left;
-      let y = event.clientY - rect.top;
-      // console.log("Coordinate x: " + x, "Coordinate y: " + y);
-      this.pointsArray.push({x, y});
-      this.drawPoint(this.vueCanvas, x, y);
-
-
-    },
     drawPoint: function (ctx, x, y) {
       ctx.beginPath();
       ctx.arc(x, y, 7, 0, Math.PI * 2, true);
@@ -82,28 +60,6 @@ export default {
     outerPathSelPoint: function (path, x, y) {
       path.arc(x, y, 11, 0, Math.PI * 2, true);
     },
-    fillRegion: function (ctx) {
-      let innerPointsPath = new Path2D();
-      let outerPointsPath = new Path2D();
-      let regionPath = new Path2D();
-      this.clearCanvas(ctx);
-      regionPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
-      innerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
-      outerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
-      this.pointsArray.forEach((elem) => {
-        innerPointsPath.moveTo(elem.x, elem.y);
-        this.innerPathPoint(innerPointsPath, elem.x, elem.y);
-        outerPointsPath.moveTo(elem.x, elem.y);
-        this.outerPathPoint(outerPointsPath, elem.x, elem.y);
-        regionPath.lineTo(elem.x, elem.y);
-      });
-      ctx.fillStyle = "rgba(47,128,237,0.22)";
-      ctx.fill(regionPath);
-      ctx.fillStyle = "#2F80ED";
-      ctx.fill(outerPointsPath);
-      ctx.fillStyle = "#FFFFFF";
-      ctx.fill(innerPointsPath);
-    },
     drawPointsArray: function (ctx, regionMode, selElem) {
       if (this.pointsArray.length === 0) return;
       this.clearCanvas(ctx);
@@ -116,7 +72,6 @@ export default {
       innerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
       outerPointsPath.moveTo(this.pointsArray[0].x, this.pointsArray[0].y);
       this.pointsArray.forEach((elem) => {
-        // console.log("ITERATE");
         regionPath.lineTo(elem.x, elem.y);
         if (elem === selElem) {
           innerPointsSelPath.moveTo(elem.x, elem.y);
@@ -137,15 +92,18 @@ export default {
       if (regionMode) {
         ctx.fillStyle = "rgba(47,128,237,0.22)";
         ctx.fill(regionPath);
+        ctx.strokeStyle = "#2F80ED";
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 2]);
+        regionPath.closePath();
+        ctx.stroke(regionPath);
       }
-
       ctx.fillStyle = "#2F80ED";
       ctx.fill(outerPointsPath);
       ctx.fillStyle = "#FFFFFF";
       ctx.fill(innerPointsPath);
       ctx.fillStyle = "#FFFFFF";
       ctx.fill(innerPointsSelPath);
-
       ctx.fillStyle = "#2F80ED";
       ctx.fill(outerPointsSelPath);
     },
@@ -155,8 +113,9 @@ export default {
       this.clearCanvas(this.vueCanvas);
     },
     buttonClick: function () {
+      this.constructActionName = this.regionMode ? "Построить область" : "Отменить построение";
       this.regionMode = !this.regionMode;
-      this.fillRegion(this.vueCanvas);
+      this.drawPointsArray(this.vueCanvas, this.regionMode);
     },
     clearCanvas: function (ctx) {
       ctx.clearRect(0, 0, this.canvasSize.width, this.canvasSize.height);
@@ -166,12 +125,18 @@ export default {
     },
     mouseUp: function (event) {
       console.log(event);
-      console.log("MOUSE UP");
+      if (!this.selectedElem) {
+        let rect = event.target.getBoundingClientRect();
+        let x = event.clientX - rect.left;
+        let y = event.clientY - rect.top;
+        // console.log("Coordinate x: " + x, "Coordinate y: " + y);
+        this.pointsArray.push({x, y});
+        this.drawPoint(this.vueCanvas, x, y);
+      }
       this.dragMode = false;
     },
     mouseDown: function (event) {
       console.log(event);
-      console.log("MOUSE DOWN");
       this.dragMode = true;
     },
     mouseMove: function (event) {
@@ -179,45 +144,24 @@ export default {
       let x = event.clientX - rect.left;
       let y = event.clientY - rect.top;
       // console.log("Coordinate x: " + x, "Coordinate y: " + y);
-      // this.pointsArray.push({x, y});
-      // this.drawPoint(this.vueCanvas, x, y);
-      // console.log("MOUSEOVER");
-      //radius - 7
-      //this.pointsArray.push({x, y});
       let radius = 7;
-
-      if (this.dragMode) {
-        
-        // console.log("DRAGGING");
-        // ctx.clearRect(0,0,canvasWidth,canvasHeight);
-        // ctx.drawImage(img,canMouseX-128/2,canMouseY-120/2,128,120);
+      if(this.selectedElem && this.dragMode){
+        this.selectedElem.x = x;
+        this.selectedElem.y = y;
       }
-
-
       for (let elem of this.pointsArray) {
         if (x <= elem.x + radius && x >= elem.x - radius && y <= elem.y + radius && y >= elem.y - radius) {
-          console.log("POINT REACHED");
-          console.log(elem);
-
-          if (this.dragMode) {
-            elem.x = x;
-            elem.y = y;
-          }else{
-            return this.drawPointsArray(this.vueCanvas, this.regionMode, elem);
-          }
+          this.selectedElem = elem;
+          return this.drawPointsArray(this.vueCanvas, this.regionMode, elem);
         }
       }
+      this.selectedElem = null;
+      this.dragMode = false;
       return this.drawPointsArray(this.vueCanvas, this.regionMode);
     },
-    mouseDrag: function (event) {
-      console.log("DRAG");
-      console.log(event);
-    }
   }
 }
 </script>
-
-<!-- Add "scoped" attribute to limit CSS to this component only -->
 <style scoped>
 #drawer {
   border: 1px solid black;
